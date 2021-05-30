@@ -161,5 +161,9 @@ model = make_yolov3_model()
 weight_reader = WeightReader('models/yolov3.weights')
 # set the model weights into the model
 weight_reader.load_weights(model)
-# save the model to file
+
+# save the model to file in H5 format
 model.save('models/yolov3.h5')
+
+# in SaveModel format
+model.save('models/yolov3')

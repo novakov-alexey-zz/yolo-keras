@@ -2,3 +2,4 @@ tensorflow==2.2.0
 matplotlib
 keras
 opencv-python
+tf2onnx

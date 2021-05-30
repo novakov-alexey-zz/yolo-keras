@@ -281,7 +281,7 @@ def process_frame(model, frame, image, image_w, image_h):
     print(f"draw boxes duration {end_time}")
 
 # load yolov3 model
-model = load_model('models/yolov3.h5')
+model = load_model('models/yolov3')
 # define the expected input shape for the model
 input_w, input_h = 416, 416
 # define our new photo
