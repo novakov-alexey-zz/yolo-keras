@@ -3,3 +3,6 @@ matplotlib
 keras
 opencv-python
 tf2onnx
+onnx
+netron
+onnxruntime

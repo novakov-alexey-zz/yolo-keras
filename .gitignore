@@ -1,2 +1,5 @@
 yolokeras
 models
+target
+__pycache__
+.vscode
