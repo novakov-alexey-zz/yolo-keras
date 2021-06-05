@@ -64,10 +64,10 @@ def decode_netout(netout, anchors, obj_thresh, net_h, net_w):
     netout = netout.reshape((grid_h, grid_w, nb_box, -1))
     nb_class = netout.shape[-1] - 5
     boxes = []
-    netout[..., :2] = _sigmoid(netout[..., :2])
-    netout[..., 4:] = _sigmoid(netout[..., 4:])
+    netout[..., :2] = _sigmoid(netout[..., :2]) # x, y
+    netout[..., 4:] = _sigmoid(netout[..., 4:]) # objectness, classes
     netout[..., 5:] = netout[..., 4][..., np.newaxis] * netout[..., 5:]
-    netout[..., 5:] *= netout[..., 5:] > obj_thresh
+    netout[..., 5:] *= netout[..., 5:] > obj_thresh # set 0 to those which < obj_thresh
 
     for i in range(grid_h*grid_w):
         row = i / grid_w
@@ -181,8 +181,6 @@ def to_model_input(cv2_img, shape):
     return image, width, height
 
 # get all of the results above a threshold
-
-
 def get_boxes(boxes, labels, thresh):
     v_boxes, v_labels, v_scores = list(), list(), list()
     # enumerate all boxes
@@ -198,8 +196,6 @@ def get_boxes(boxes, labels, thresh):
     return v_boxes, v_labels, v_scores
 
 # draw all results
-
-
 def draw_boxes(filename, v_boxes, v_labels, v_scores):
     # load the image
     data = pyplot.imread(filename)
@@ -231,10 +227,10 @@ def cv2_draw_boxes(frame, v_boxes, v_labels, v_scores):
         # get coordinates
         y1, x1, y2, x2 = box.ymin, box.xmin, box.ymax, box.xmax
         label = "%s (%.3f)" % (v_labels[i], v_scores[i])
-        thickness = 2
-        font_scale = 1
+        thickness = 1
+        font_scale = 0.5
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255), 1)
         cv2.putText(frame, label, (x1, y1), font,
                     font_scale, (255, 255, 255), thickness)
 
@@ -245,8 +241,7 @@ def process_frame(model, frame, image, image_w, image_h):
     yhat = model.predict(image)
     end_time = time.time() - start_time
     print(f"predicted duration {end_time}")
-    # summarize the shape of the list of arrays
-    # print([a.shape for a in yhat])
+
     # define the anchors
     start_time = time.time()
     boxes = list()
@@ -272,34 +267,41 @@ def process_frame(model, frame, image, image_w, image_h):
     # get the details of the detected objects
     v_boxes, v_labels, v_scores = get_boxes(boxes, labels, class_threshold)
     # summarize what we found
-    # for i in range(len(v_boxes)):
-    #     print(v_labels[i], v_scores[i])
+    for i in range(len(v_boxes)):
+        print(v_boxes[i].xmin,v_boxes[i].ymin, v_boxes[i].xmax, v_boxes[i].ymax, v_labels[i], v_scores[i])
     
     start_time = time.time()
     cv2_draw_boxes(frame, v_boxes, v_labels, v_scores)
     end_time = time.time() - start_time
     print(f"draw boxes duration {end_time}")
 
-# load yolov3 model
-model = load_model('models/yolov3')
-# define the expected input shape for the model
-input_w, input_h = 416, 416
-# define our new photo
-# photo_filename = 'zebra.jpg'
+def annotate_image(model, input_w, input_h):
+    # define our new photo    
+    photo_filename = 'zebra.jpg'
+    image, image_w, image_h = load_image_pixels(photo_filename, (input_w, input_h))
+    out_image = cv2.imread(photo_filename)    
+    process_frame(model, out_image, image, image_w, image_h)
+    cv2.imwrite('zebra-out.jpg', out_image)
 
-video_capture = cv2.VideoCapture(0)
+if __name__ == '__main__':
+    # load yolov3 model
+    model = load_model('models/yolov3')
+    # define the expected input shape for the model
+    input_w, input_h = 416, 416 
 
-while True:
-    _, frame = video_capture.read()
-    rgb_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    video_capture = cv2.VideoCapture(0)
 
-    image, image_w, image_h = to_model_input(rgb_img, (input_w, input_h))
-    process_frame(model, frame, image, image_w, image_h)
+    while True:
+        _, frame = video_capture.read()
+        rgb_img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    cv2.imshow('YOLO v.3', frame)
+        image, image_w, image_h = to_model_input(rgb_img, (input_w, input_h))
+        process_frame(model, frame, image, image_w, image_h)
 
-    if cv2.waitKey(5) == 27:  # ESC key press
-        break
+        cv2.imshow('YOLO v.3', frame)
 
-video_capture.release()
-cv2.destroyAllWindows()
+        if cv2.waitKey(5) == 27:  # ESC key press
+            break
+
+    video_capture.release()
+    cv2.destroyAllWindows()
